@@ -8,26 +8,19 @@ export async function checkSubscriptionStatus(userId: string) {
 
   try {
     const { data, error } = await supabase
-      .from('subscriptions')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('status', 'active')
+      .from('profiles')
+      .select('subscribed')
+      .eq('id', userId)
       .single();
 
     if (error || !data) {
-      return { isActive: false, subscription: null };
+      return { isActive: false, profile: null };
     }
 
-    // Check if subscription has expired
-    const expiryDate = new Date(data.expires_at);
-    if (expiryDate < new Date()) {
-      return { isActive: false, subscription: null };
-    }
-
-    return { isActive: true, subscription: data };
+    return { isActive: data.subscribed === true, profile: data };
   } catch (error) {
     console.error('Subscription check error:', error);
-    return { isActive: false, subscription: null };
+    return { isActive: false, profile: null };
   }
 }
 
