@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '@/lib/useAuth';
 
 interface Meeting {
   id: string;
@@ -15,6 +16,7 @@ interface Meeting {
 export default function MeetingDetail() {
   const params = useParams();
   const meetingId = params?.id as string;
+  const { session } = useAuth();
 
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,20 +54,41 @@ export default function MeetingDetail() {
 
     try {
       setSummarizing(true);
+      setError(null);
+
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+
+      // Add authorization token if session exists
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
       const response = await fetch('/api/summarise', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ text: meeting.transcript }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to summarize');
+        const data = await response.json();
+        if (response.status === 403) {
+          setError('Subscription required: Please upgrade your plan to generate summaries');
+        } else if (response.status === 401) {
+          setError('Please log in to generate summaries');
+        } else {
+          setError(data.error || 'Failed to summarize');
+        }
+        throw new Error(data.error || 'Failed to summarize');
       }
 
       const data = await response.json();
       setMeeting({ ...meeting, summary: data.summary });
     } catch (err) {
-      setError('Failed to summarize transcript');
+      if (!error) {
+        setError('Failed to summarize transcript');
+      }
       console.error(err);
     } finally {
       setSummarizing(false);
@@ -131,6 +154,19 @@ export default function MeetingDetail() {
           <div className="bg-white p-6 rounded-lg shadow mb-6">
             <h2 className="text-2xl font-semibold mb-4">Transcript</h2>
             <p className="text-gray-700 whitespace-pre-wrap">{meeting.transcript}</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-100 text-red-700 p-4 rounded mb-6 border border-red-300">
+            {error}
+            {error.includes('Subscription') && (
+              <div className="mt-2">
+                <Link href="/pricing" className="underline font-semibold">
+                  Upgrade your subscription →
+                </Link>
+              </div>
+            )}
           </div>
         )}
 

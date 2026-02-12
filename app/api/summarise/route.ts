@@ -1,7 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { checkSubscriptionStatus, getUserFromRequest } from '@/lib/subscription';
 
 export async function POST(request: NextRequest) {
   try {
+    // Check user subscription
+    const user = await getUserFromRequest(request);
+    
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Please log in' },
+        { status: 401 }
+      );
+    }
+
+    const { isActive } = await checkSubscriptionStatus(user.id);
+    
+    if (!isActive) {
+      return NextResponse.json(
+        { error: 'Active subscription required to generate summaries' },
+        { status: 403 }
+      );
+    }
+
     const { text } = await request.json();
 
     if (!text) {
