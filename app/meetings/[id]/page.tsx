@@ -72,6 +72,39 @@ export default function MeetingDetail() {
     }
   };
 
+  const handleDownloadPDF = async () => {
+    if (!meeting?.summary) return;
+
+    try {
+      const response = await fetch('/api/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          summary: meeting.summary,
+          title: meeting.title,
+          date: meeting.date,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${meeting.title}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      setError('Failed to download PDF');
+      console.error(err);
+    }
+  };
+
   if (loading) {
     return <div className="p-6">Loading meeting...</div>;
   }
@@ -113,7 +146,15 @@ export default function MeetingDetail() {
 
         {meeting.summary && (
           <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-2xl font-semibold mb-4">Summary</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-semibold">Summary</h2>
+              <button
+                onClick={handleDownloadPDF}
+                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+              >
+                Download PDF
+              </button>
+            </div>
             <p className="text-gray-700 whitespace-pre-wrap">{meeting.summary}</p>
           </div>
         )}
