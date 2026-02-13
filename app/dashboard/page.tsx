@@ -1,39 +1,81 @@
-import { redirect } from "next/navigation"
-import { cookies } from "next/headers"
-import { createClient } from "@supabase/supabase-js"
+"use client"
 
-export default async function Dashboard() {
-  const cookieStore = cookies()
+import { useState } from "react"
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+export default function Dashboard() {
+  const [file, setFile] = useState<File | null>(null)
+  const [transcript, setTranscript] = useState("")
+  const [summary, setSummary] = useState("")
+  const [loading, setLoading] = useState(false)
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const handleUpload = async () => {
+    if (!file) return
 
-  if (!user) {
-    redirect("/login")
-  }
+    setLoading(true)
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("subscribed, subscription_expires_at")
-    .eq("id", user.id)
-    .single()
+    const formData = new FormData()
+    formData.append("file", file)
 
-  if (
-    !profile?.subscribed ||
-    !profile.subscription_expires_at ||
-    new Date(profile.subscription_expires_at) < new Date()
-  ) {
-    redirect("/subscribe")
+    // 1️⃣ Transcribe
+    const transcribeRes = await fetch("/api/transcribe", {
+      method: "POST",
+      body: formData
+    })
+
+    const transcribeData = await transcribeRes.json()
+
+    setTranscript(transcribeData.text)
+
+    // 2️⃣ Summarise
+    const summariseRes = await fetch("/api/summarise", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        transcript: transcribeData.text
+      })
+    })
+
+    const summariseData = await summariseRes.json()
+
+    setSummary(summariseData.data)
+
+    setLoading(false)
   }
 
   return (
     <div style={{ padding: "40px" }}>
       <h1>Dashboard</h1>
-      <p>Welcome to AdviserNote AI.</p>
+
+      <input
+        type="file"
+        accept="audio/*"
+        onChange={(e) => {
+          if (e.target.files) setFile(e.target.files[0])
+        }}
+      />
+
+      <button
+        onClick={handleUpload}
+        style={{ marginLeft: "10px" }}
+      >
+        Upload & Process
+      </button>
+
+      {loading && <p>Processing...</p>}
+
+      {transcript && (
+        <>
+          <h2>Transcript</h2>
+          <p>{transcript}</p>
+        </>
+      )}
+
+      {summary && (
+        <>
+          <h2>Summary</h2>
+          <pre>{summary}</pre>
+        </>
+      )}
     </div>
   )
 }
