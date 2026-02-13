@@ -16,6 +16,20 @@ export default async function Dashboard() {
     redirect("/login")
   }
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("subscribed, subscription_expires_at")
+    .eq("id", user.id)
+    .single()
+
+  if (
+    !profile?.subscribed ||
+    !profile.subscription_expires_at ||
+    new Date(profile.subscription_expires_at) < new Date()
+  ) {
+    redirect("/subscribe")
+  }
+
   return (
     <div style={{ padding: "40px" }}>
       <h1>Dashboard</h1>

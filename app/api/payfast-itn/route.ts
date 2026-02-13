@@ -14,9 +14,15 @@ export async function POST(request: NextRequest) {
         process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
 
+      const expiresAt = new Date();
+      expiresAt.setMonth(expiresAt.getMonth() + 1);
+
       await supabase
         .from('profiles')
-        .update({ subscribed: true })
+        .update({
+          subscribed: true,
+          subscription_expires_at: expiresAt.toISOString(),
+        })
         .eq('id', userId);
     }
 
