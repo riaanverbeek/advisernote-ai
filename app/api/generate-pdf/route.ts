@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     // Add title
     if (title) {
       doc.setFontSize(18);
-      doc.setFont(undefined, 'bold');
+      doc.setFont("helvetica", "bold");
       const titleLines = doc.splitTextToSize(title, contentWidth);
       doc.text(titleLines, margin, yPosition);
       yPosition += titleLines.length * 8 + 5;
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     // Add date
     if (date) {
       doc.setFontSize(10);
-      doc.setFont(undefined, 'normal');
+      doc.setFont("helvetica", "normal");
       const formattedDate = new Date(date).toLocaleString();
       doc.text(`Generated: ${formattedDate}`, margin, yPosition);
       yPosition += 10;
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     // Add summary
     doc.setFontSize(12);
-    doc.setFont(undefined, 'normal');
+    doc.setFont("helvetica", "normal");
     const summaryLines = doc.splitTextToSize(summary, contentWidth);
 
     // Handle page breaks if summary is long
